@@ -176,10 +176,43 @@ export default function Navbar() {
           {/* User Profile / Auth Actions */}
           {session ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ fontSize: '0.8rem', lineHeight: 1.2, textAlign: 'right' }}>
-                <div style={{ color: 'var(--text-muted)' }}>Hello, {session.user?.name?.split(' ')[0] || 'User'}</div>
-                <div style={{ color: 'var(--accent-bright)', fontWeight: 700, textTransform: 'capitalize' }}>{role || 'Buyer'}</div>
-              </div>
+              <Link
+                href="/profile"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  textDecoration: 'none',
+                  padding: '4px 8px',
+                  borderRadius: 'var(--radius)',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                }}
+                title="View & Edit Profile"
+              >
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    background: role === 'seller' ? 'linear-gradient(135deg, #8b5cf6, #3b82f6)' : 'linear-gradient(135deg, #6366f1, #10b981)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  {session.user?.name ? session.user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div style={{ fontSize: '0.8rem', lineHeight: 1.2, textAlign: 'left' }}>
+                  <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{session.user?.name?.split(' ')[0] || 'User'}</div>
+                  <div style={{ color: 'var(--accent-bright)', fontWeight: 700, fontSize: '0.7rem', textTransform: 'capitalize' }}>
+                    {role === 'seller' ? '🏪 Merchant' : '🛍️ Buyer'}
+                  </div>
+                </div>
+              </Link>
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
                 title="Sign Out"

@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Cart from '@/models/Cart';
+import Product from '@/models/Product';
+import User from '@/models/User';
 import { verifyRazorpaySignature } from '@/lib/razorpay';
+import { sendOrderConfirmationEmail } from '@/lib/resend';
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Explicit buyer confirmation required.' }, { status: 400 });
     }
 
-    // Signature verification (only if signature is provided; in test sandbox fallback is supported)
+    // Signature verification
     if (razorpay_signature) {
       const isValid = verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
       if (!isValid) {
@@ -49,8 +52,25 @@ export async function POST(req: NextRequest) {
     order.updatedAt = new Date();
     await order.save();
 
+    // Deduct stock for each purchased product
+    for (const item of order.items) {
+      if (item.productId) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stock: -item.qty },
+        });
+      }
+    }
+
     // Clear cart for the buyer
     await Cart.findOneAndDelete({ buyerId: order.buyerId });
+
+    // Send confirmation email via Resend
+    const buyer = await User.findById(order.buyerId);
+    const buyerEmail = buyer?.email || 'customer@shopez.com';
+    const buyerName = order.shippingAddress?.name || buyer?.name || 'Customer';
+    sendOrderConfirmationEmail(buyerEmail, buyerName, order).catch((e) =>
+      console.warn('Resend Razorpay confirmation email warning:', e)
+    );
 
     return NextResponse.json({
       success: true,

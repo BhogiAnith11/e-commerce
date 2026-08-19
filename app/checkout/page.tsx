@@ -55,20 +55,40 @@ export default function CheckoutPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    async function loadCart() {
+    async function loadData() {
       try {
-        const res = await fetch('/api/mcp/orders/cart');
-        if (res.ok) {
-          const data = await res.json();
+        const [cartRes, profileRes] = await Promise.all([
+          fetch('/api/mcp/orders/cart'),
+          fetch('/api/account/profile'),
+        ]);
+
+        if (cartRes.ok) {
+          const data = await cartRes.json();
           setCart(data.cart || { items: [] });
         }
+
+        if (profileRes.ok) {
+          const pData = await profileRes.json();
+          if (pData?.user) {
+            const u = pData.user;
+            setAddress((prev) => ({
+              ...prev,
+              name: u.name || prev.name,
+              phone: u.phone || prev.phone,
+              line1: u.address?.line1 || prev.line1,
+              city: u.address?.city || prev.city,
+              state: u.address?.state || prev.state,
+              postalCode: u.address?.postalCode || prev.postalCode,
+            }));
+          }
+        }
       } catch (e) {
-        console.error(e);
+        console.error('Checkout data load error:', e);
       } finally {
         setLoading(false);
       }
     }
-    loadCart();
+    loadData();
   }, []);
 
   const handleUseCurrentLocation = () => {
@@ -83,42 +103,82 @@ export default function CheckoutPage() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            const street = addr.road || addr.suburb || addr.neighbourhood || 'Live Location Street';
-            const city = addr.city || addr.town || addr.state_district || 'Bengaluru';
-            const state = addr.state || 'Karnataka';
-            const postalCode = addr.postcode || '560038';
+        let resolved = false;
 
+        // 1. Try Google Maps Geocoding API if key available
+        const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (googleApiKey) {
+          try {
+            const gRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleApiKey}`);
+            const gData = await gRes.json();
+            if (gData.status === 'OK' && gData.results?.[0]) {
+              const result = gData.results[0];
+              let street = '';
+              let city = 'Bengaluru';
+              let state = 'Karnataka';
+              let postalCode = '560038';
+
+              for (const comp of result.address_components || []) {
+                if (comp.types.includes('route') || comp.types.includes('sublocality')) street += (street ? ', ' : '') + comp.long_name;
+                if (comp.types.includes('locality') || comp.types.includes('administrative_area_level_2')) city = comp.long_name;
+                if (comp.types.includes('administrative_area_level_1')) state = comp.long_name;
+                if (comp.types.includes('postal_code')) postalCode = comp.long_name;
+              }
+
+              setAddress((prev) => ({
+                ...prev,
+                line1: street || result.formatted_address?.split(',')[0] || 'Detected Address',
+                city,
+                state,
+                postalCode,
+              }));
+              resolved = true;
+              setLocationSuccess(true);
+              setTimeout(() => setLocationSuccess(false), 3000);
+            }
+          } catch (gErr) {
+            console.warn('Google Maps API geocode error:', gErr);
+          }
+        }
+
+        // 2. OpenStreetMap fallback
+        if (!resolved) {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+            );
+            if (res.ok) {
+              const data = await res.json();
+              const addr = data.address || {};
+              const street = addr.road || addr.suburb || addr.neighbourhood || 'Live Location Street';
+              const city = addr.city || addr.town || addr.state_district || 'Bengaluru';
+              const state = addr.state || 'Karnataka';
+              const postalCode = addr.postcode || '560038';
+
+              setAddress((prev) => ({
+                ...prev,
+                line1: `${street}, ${data.display_name?.split(',')[0] || ''}`.trim(),
+                city,
+                state,
+                postalCode,
+              }));
+              setLocationSuccess(true);
+              setTimeout(() => setLocationSuccess(false), 3000);
+            } else {
+              throw new Error('Reverse geocode failed');
+            }
+          } catch {
             setAddress((prev) => ({
               ...prev,
-              line1: `${street}, ${data.display_name?.split(',')[0] || ''}`.trim(),
-              city,
-              state,
-              postalCode,
+              line1: `GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+              city: 'Bengaluru',
+              state: 'Karnataka',
+              postalCode: '560038',
             }));
             setLocationSuccess(true);
-            setTimeout(() => setLocationSuccess(false), 3000);
-          } else {
-            throw new Error('Reverse geocode failed');
           }
-        } catch {
-          setAddress((prev) => ({
-            ...prev,
-            line1: `GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-            city: 'Bengaluru',
-            state: 'Karnataka',
-            postalCode: '560038',
-          }));
-          setLocationSuccess(true);
-        } finally {
-          setLocating(false);
         }
+        setLocating(false);
       },
       (err) => {
         console.warn('Geolocation error:', err);

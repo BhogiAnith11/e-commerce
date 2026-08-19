@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
+import User from '@/models/User';
 import { indexProduct } from '@/lib/algolia';
 import mongoose from 'mongoose';
 
@@ -21,10 +22,25 @@ export async function POST(req: NextRequest) {
       image_url,
       media_id,
       seller_id,
-      stock = 1,
+      stock = 10,
     } = body;
 
-    const resolvedSellerId = seller_id || (session?.user as { id?: string })?.id || '000000000000000000000001';
+    await connectDB();
+
+    let resolvedSellerId = seller_id;
+    if (!resolvedSellerId && session?.user) {
+      const userObj = session.user as { id?: string; email?: string };
+      if (userObj.id && mongoose.Types.ObjectId.isValid(userObj.id)) {
+        resolvedSellerId = userObj.id;
+      } else if (userObj.email) {
+        const dbUser = await User.findOne({ email: userObj.email.toLowerCase() });
+        if (dbUser) resolvedSellerId = dbUser._id.toString();
+      }
+    }
+
+    if (!resolvedSellerId || !mongoose.Types.ObjectId.isValid(resolvedSellerId)) {
+      resolvedSellerId = '000000000000000000000001';
+    }
 
     // Hard gate: seller must explicitly confirm (BRD BR-04)
     if (seller_confirmed !== true) {
@@ -41,12 +57,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await connectDB();
-
     const product = await Product.create({
-      sellerId: mongoose.Types.ObjectId.isValid(resolvedSellerId)
-        ? new mongoose.Types.ObjectId(resolvedSellerId)
-        : new mongoose.Types.ObjectId('000000000000000000000001'),
+      sellerId: new mongoose.Types.ObjectId(resolvedSellerId),
       title,
       description,
       category,

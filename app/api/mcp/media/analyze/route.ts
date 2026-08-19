@@ -1,6 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
 import anthropic from '@/lib/anthropic';
 
+async function analyzeWithGoogleVision(imageUrl: string, apiKey: string) {
+  try {
+    const res = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [
+          {
+            image: { source: { imageUri: imageUrl } },
+            features: [
+              { type: 'LABEL_DETECTION', maxResults: 8 },
+              { type: 'OBJECT_LOCALIZATION', maxResults: 5 },
+              { type: 'TEXT_DETECTION', maxResults: 5 },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const response = data.responses?.[0];
+    if (!response || response.error) return null;
+
+    const labels = (response.labelAnnotations || []).map((l: any) => l.description);
+    const objects = (response.localizedObjectAnnotations || []).map((o: any) => o.name);
+    const detectedText = response.textAnnotations?.[0]?.description || '';
+
+    let category = 'Electronics';
+    const allLabels = [...labels, ...objects].join(' ').toLowerCase();
+
+    if (allLabels.includes('shoe') || allLabels.includes('sneaker') || allLabels.includes('footwear')) {
+      category = 'Footwear';
+    } else if (allLabels.includes('cloth') || allLabels.includes('dress') || allLabels.includes('shirt') || allLabels.includes('jacket')) {
+      category = 'Clothing';
+    } else if (allLabels.includes('watch') || allLabels.includes('phone') || allLabels.includes('gadget') || allLabels.includes('computer')) {
+      category = 'Electronics';
+    } else if (allLabels.includes('book')) {
+      category = 'Books';
+    } else if (allLabels.includes('sports') || allLabels.includes('ball') || allLabels.includes('fitness')) {
+      category = 'Sports';
+    }
+
+    const primaryObj = objects[0] || labels[0] || 'Product';
+    return {
+      category,
+      subcategory: primaryObj,
+      attributes: {
+        color: labels.find((l: string) => ['black', 'white', 'blue', 'red', 'green', 'grey', 'brown'].includes(l.toLowerCase())) || 'Multi-color',
+        material: 'High-grade Material',
+        brand: detectedText ? detectedText.split('\n')[0].slice(0, 30) : 'Verified Merchant',
+        condition: 'new',
+        size: 'Standard',
+        key_feature: labels.slice(0, 4).join(', '),
+      },
+      suggested_title: `${primaryObj} - ${category}`,
+      description_hints: `Authentic ${primaryObj} with high durability and quality build. Detected features: ${labels.slice(0, 5).join(', ')}.`,
+    };
+  } catch (err) {
+    console.warn('Google Vision API call error:', err);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { image_url, media_id } = await req.json();
@@ -11,25 +75,31 @@ export async function POST(req: NextRequest) {
 
     let analysis: any = null;
 
-    // Try Claude Vision
-    try {
-      const message = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'url',
-                  url: image_url,
+    // 1. Try Google Cloud Vision API if key configured
+    if (process.env.GOOGLE_CLOUD_VISION_KEY) {
+      analysis = await analyzeWithGoogleVision(image_url, process.env.GOOGLE_CLOUD_VISION_KEY);
+    }
+
+    // 2. Try Claude Vision if not resolved
+    if (!analysis) {
+      try {
+        const message = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1024,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'url',
+                    url: image_url,
+                  },
                 },
-              },
-              {
-                type: 'text',
-                text: `Analyze this product image and return a JSON object with:
+                {
+                  type: 'text',
+                  text: `Analyze this product image and return a JSON object with:
 {
   "category": "main product category (e.g. Electronics, Clothing, Footwear, Books, Home, Sports, Beauty)",
   "subcategory": "more specific subcategory",
@@ -45,22 +115,23 @@ export async function POST(req: NextRequest) {
   "description_hints": "brief product description hints"
 }
 Return ONLY the JSON object.`,
-              },
-            ],
-          },
-        ],
-      });
+                },
+              ],
+            },
+          ],
+        });
 
-      const text = message.content[0].type === 'text' ? message.content[0].text : '{}';
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        analysis = JSON.parse(jsonMatch[0]);
+        const text = message.content[0].type === 'text' ? message.content[0].text : '{}';
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          analysis = JSON.parse(jsonMatch[0]);
+        }
+      } catch (anthropicError: any) {
+        console.warn('Anthropic API vision call failed (using smart fallback):', anthropicError?.message);
       }
-    } catch (anthropicError: any) {
-      console.warn('Anthropic API vision call failed (using smart fallback):', anthropicError?.message);
     }
 
-    // Heuristic fallback if Claude API balance is exhausted or rate limited
+    // 3. Heuristic fallback if external APIs are unavailable
     if (!analysis || !analysis.category) {
       const urlLower = image_url.toLowerCase();
       let category = 'Electronics';

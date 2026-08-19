@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import { sendWelcomeEmail } from '@/lib/resend';
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,6 +55,11 @@ export async function POST(req: NextRequest) {
       role,
       passwordHash,
     });
+
+    // Send Welcome Email asynchronously via Resend
+    sendWelcomeEmail(user.email, user.name, user.role).catch((err) =>
+      console.warn('Resend welcome email warning:', err)
+    );
 
     return NextResponse.json(
       {

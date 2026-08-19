@@ -4,7 +4,9 @@ import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Cart from '@/models/Cart';
 import User from '@/models/User';
+import Product from '@/models/Product';
 import { createPaymentIntent } from '@/lib/stripe';
+import { sendOrderConfirmationEmail } from '@/lib/resend';
 import mongoose from 'mongoose';
 
 async function resolveBuyerId(session: any): Promise<mongoose.Types.ObjectId> {
@@ -85,8 +87,24 @@ export async function POST(req: NextRequest) {
     order.updatedAt = new Date();
     await order.save();
 
+    // Deduct stock for each purchased product
+    for (const item of order.items) {
+      if (item.productId) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stock: -item.qty },
+        });
+      }
+    }
+
     // Clear cart for the buyer
     await Cart.findOneAndDelete({ buyerId: order.buyerId });
+
+    // Send Order Confirmation Email via Resend
+    const buyerEmail = session?.user?.email || 'guest@shopez.com';
+    const buyerName = order.shippingAddress?.name || session?.user?.name || 'Customer';
+    sendOrderConfirmationEmail(buyerEmail, buyerName, order).catch((e) =>
+      console.warn('Resend order confirmation email warning:', e)
+    );
 
     return NextResponse.json({
       client_secret: clientSecret,

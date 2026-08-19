@@ -2,14 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
+import User from '@/models/User';
+import mongoose from 'mongoose';
 
-/**
- * GET /api/seller/products
- * Returns ALL of the authenticated seller's products (draft + published + delisted).
- * Query params:
- *   - status: filter by status (draft | published | delisted | all)
- *   - page, limit: pagination
- */
+async function resolveSellerId(session: any): Promise<mongoose.Types.ObjectId | null> {
+  await connectDB();
+  if (session?.user) {
+    const userObj = session.user as { id?: string; email?: string };
+    if (userObj.id && mongoose.Types.ObjectId.isValid(userObj.id)) {
+      return new mongoose.Types.ObjectId(userObj.id);
+    }
+    if (userObj.email) {
+      const user = await User.findOne({ email: userObj.email.toLowerCase() });
+      if (user) return user._id;
+    }
+  }
+  return null;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession();
@@ -17,21 +27,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = (session.user as { id?: string }).id;
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const sellerId = await resolveSellerId(session);
+    if (!sellerId) {
+      return NextResponse.json({
+        products: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+        stats: { published: 0, draft: 0, delisted: 0, total: 0 },
+      });
+    }
+
+    await connectDB();
 
     const { searchParams } = new URL(req.url);
     const statusFilter = searchParams.get('status') || 'all';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const limit = Math.min(50, parseInt(searchParams.get('limit') || '20'));
 
-    await connectDB();
-
-    const filter: Record<string, unknown> = { sellerId: userId };
+    const filter: Record<string, unknown> = { sellerId };
     if (statusFilter !== 'all') {
-      if (!['draft', 'published', 'delisted'].includes(statusFilter)) {
-        return NextResponse.json({ error: 'Invalid status filter' }, { status: 400 });
-      }
       filter.status = statusFilter;
     }
 
@@ -44,11 +57,11 @@ export async function GET(req: NextRequest) {
       Product.countDocuments(filter),
     ]);
 
-    // Summary counts for dashboard stats cards
+    // Summary counts for dashboard stats cards strictly for this seller
     const [publishedCount, draftCount, delistedCount] = await Promise.all([
-      Product.countDocuments({ sellerId: userId, status: 'published' }),
-      Product.countDocuments({ sellerId: userId, status: 'draft' }),
-      Product.countDocuments({ sellerId: userId, status: 'delisted' }),
+      Product.countDocuments({ sellerId, status: 'published' }),
+      Product.countDocuments({ sellerId, status: 'draft' }),
+      Product.countDocuments({ sellerId, status: 'delisted' }),
     ]);
 
     return NextResponse.json({
