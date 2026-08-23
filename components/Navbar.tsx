@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { ShoppingCart, Store, Package, LogOut, LogIn, Zap, ShieldCheck, MapPin } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +13,7 @@ async function fetchCartCount(): Promise<number> {
 }
 
 export default function Navbar() {
+  const pathname = usePathname();
   const { data: session } = useSession();
   const role = (session?.user as { role?: string })?.role;
 
@@ -20,6 +22,11 @@ export default function Navbar() {
     queryFn: fetchCartCount,
     refetchInterval: 8_000,
   });
+
+  // Hide the standard Buyer navigation on the standalone Delivery Partner Portal
+  if (pathname.startsWith('/delivery')) {
+    return null;
+  }
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 50 }}>
@@ -52,9 +59,13 @@ export default function Navbar() {
             <Link href="/search" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: 500 }}>
               Explore Products
             </Link>
-            <Link href="/seller/new" style={{ color: 'var(--accent-bright)', textDecoration: 'none', fontWeight: 600 }}>
-              Sell on ShopEZ
-            </Link>
+
+            {/* Only show "Sell on ShopEZ" CTA to guests (not logged-in buyers or sellers) */}
+            {!session && (
+              <Link href="/seller/new" style={{ color: 'var(--accent-bright)', textDecoration: 'none', fontWeight: 600 }}>
+                Sell on ShopEZ
+              </Link>
+            )}
           </div>
         </div>
 

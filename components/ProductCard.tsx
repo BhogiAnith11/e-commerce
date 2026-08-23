@@ -13,6 +13,8 @@ export interface ProductCardData {
   imageUrl: string;
   category: string;
   stock?: number;
+  rating?: number;
+  numReviews?: number;
   status?: string;
 }
 
@@ -34,6 +36,9 @@ export default function ProductCard({
   const inStock = (product.stock ?? 1) > 0;
   const [added, setAdded] = useState(false);
   const [adding, setAdding] = useState(false);
+
+  const rating = product.rating || 0;
+  const numReviews = product.numReviews || 0;
 
   const handleDefaultAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -128,9 +133,16 @@ export default function ProductCard({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           {[1, 2, 3, 4, 5].map((s) => (
-            <Star key={s} size={11} color={s <= 4 ? '#f59e0b' : 'var(--border)'} fill={s <= 4 ? '#f59e0b' : 'none'} />
+            <Star
+              key={s}
+              size={11}
+              color={rating > 0 && s <= Math.round(rating) ? '#f59e0b' : 'var(--border)'}
+              fill={rating > 0 && s <= Math.round(rating) ? '#f59e0b' : 'none'}
+            />
           ))}
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 2 }}>(4.5)</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 2 }}>
+            {rating > 0 ? `(${rating.toFixed(1)})` : '(0)'}
+          </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 8 }}>

@@ -1,0 +1,25 @@
+# Add this service block to your existing render.yaml, alongside the shopez service.
+
+services:
+  # ...your existing shopez service definition stays as-is...
+
+  - type: web
+    name: crewservies
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    rootDir: crewservies
+    envVars:
+      - key: NEXT_API_BASE
+        value: https://your-shopez-app.onrender.com
+      - key: INTERNAL_SERVICE_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+# Then, in the shopez service's envVars, add:
+#   - key: CREW_SERVICE_URL
+#     value: https://crewservies.onrender.com   (its live Render URL)
+#   - key: INTERNAL_SERVICE_TOKEN
+#     sync: false   (same value as crewservies's)

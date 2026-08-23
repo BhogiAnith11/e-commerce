@@ -1,8 +1,13 @@
 'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Zap, Globe, X, Heart } from 'lucide-react';
 
 export default function Footer() {
+  const pathname = usePathname();
+  if (pathname.startsWith('/delivery')) {
+    return null;
+  }
   return (
     <footer style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)', padding: '3rem 0 2rem', marginTop: '4rem' }}>
       <div className="page-container">

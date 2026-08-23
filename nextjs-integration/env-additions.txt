@@ -1,0 +1,8 @@
+# Add these to shopez/.env.local
+
+# Local dev:  http://localhost:8001
+# Production: internal Render URL of the crew-service, e.g. http://crew-service:10000
+CREW_SERVICE_URL=http://localhost:8001
+
+# Must be the exact same value as INTERNAL_SERVICE_TOKEN in crew-service/.env
+INTERNAL_SERVICE_TOKEN=replace-with-a-long-random-string

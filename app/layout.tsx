@@ -3,6 +3,7 @@ import './globals.css';
 import Providers from '@/components/Providers';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import FloatingChatBot from '@/components/FloatingChatBot';
 
 export const metadata: Metadata = {
   title: 'ShopEZ — AI-Powered Marketplace',
@@ -13,12 +14,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body>
         <Providers>
           <Navbar />
           <main style={{ minHeight: 'calc(100vh - 72px)' }}>{children}</main>
           <Footer />
+          <FloatingChatBot />
         </Providers>
       </body>
     </html>

@@ -571,6 +571,8 @@ export default function CheckoutPage() {
                 </div>
               )}
             </div>
+
+            <AgentChat role="buyer" />
           </div>
 
           {/* Right Section: Order Summary & Agent Assistant */}
@@ -591,7 +593,6 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <AgentChat role="buyer" />
           </div>
         </div>
       </div>

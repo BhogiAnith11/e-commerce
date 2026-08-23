@@ -23,12 +23,17 @@ export interface IOrder extends Document {
   buyerId: mongoose.Types.ObjectId;
   items: IOrderItem[];
   totalAmount: number;
-  status: 'created' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'created' | 'paid' | 'processing' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
   shippingAddress: IShippingAddress;
   paymentMethod?: string;
   upiId?: string;
   stripePaymentIntentId?: string;
   estimatedDeliveryDate?: Date;
+  courierName?: string;
+  trackingNumber?: string;
+  deliveryOtp?: string;
+  deliveryNotes?: string;
+  deliveredAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,8 +53,8 @@ const OrderSchema = new Schema<IOrder>(
     totalAmount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ['created', 'paid', 'shipped', 'delivered', 'cancelled'],
-      default: 'created',
+      enum: ['created', 'paid', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'],
+      default: 'paid',
     },
     shippingAddress: {
       name: String,
@@ -65,6 +70,11 @@ const OrderSchema = new Schema<IOrder>(
     upiId: { type: String },
     stripePaymentIntentId: { type: String },
     estimatedDeliveryDate: { type: Date },
+    courierName: { type: String, default: 'ShopEZ Express' },
+    trackingNumber: { type: String },
+    deliveryOtp: { type: String, default: '4829' },
+    deliveryNotes: { type: String },
+    deliveredAt: { type: Date },
   },
   { timestamps: true }
 );

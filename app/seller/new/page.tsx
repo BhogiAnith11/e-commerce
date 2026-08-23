@@ -34,7 +34,8 @@ export default function NewListingPage() {
     }
   };
 
-  // Generate Draft with Claude AI (BFF endpoint)
+
+  // Generate Draft with Claude AI / Image
   const handleGenerateDraft = async () => {
     setError('');
     setLoadingDraft(true);
@@ -108,7 +109,7 @@ export default function NewListingPage() {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>List a Product with AI</h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Upload an image or paste a link. Create ANY category (e.g. Shoes, Sports, Innerwear) and it will immediately reflect across buyer storefront pages.
+          Upload a product photo or paste a URL to generate an AI-powered listing in seconds.
         </p>
       </div>
 
@@ -125,7 +126,7 @@ export default function NewListingPage() {
           {!draft ? (
             <div className="card" style={{ padding: '1.5rem' }}>
               {/* Tab Selector */}
-              <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => setTab('upload')}
@@ -140,7 +141,7 @@ export default function NewListingPage() {
                   className={tab === 'url' ? 'btn-glow' : 'btn-ghost'}
                   style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                 >
-                  <LinkIcon size={16} /> Product / Image URL
+                  <LinkIcon size={16} /> Product URL
                 </button>
               </div>
 
@@ -158,6 +159,16 @@ export default function NewListingPage() {
                       </>
                     )}
                   </label>
+
+                  <button
+                    onClick={handleGenerateDraft}
+                    disabled={loadingDraft}
+                    className="btn-glow"
+                    style={{ width: '100%', padding: '0.875rem', marginTop: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Sparkles size={18} />
+                    {loadingDraft ? 'Analyzing image & generating draft...' : 'Generate AI Listing Draft'}
+                  </button>
                 </div>
               ) : (
                 <div>
@@ -169,54 +180,27 @@ export default function NewListingPage() {
                     value={imageUrlInput}
                     onChange={(e) => setImageUrlInput(e.target.value)}
                   />
+
+                  <button
+                    onClick={handleGenerateDraft}
+                    disabled={loadingDraft}
+                    className="btn-glow"
+                    style={{ width: '100%', padding: '0.875rem', marginTop: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Sparkles size={18} />
+                    {loadingDraft ? 'Generating draft from URL...' : 'Generate AI Listing Draft'}
+                  </button>
                 </div>
               )}
-
-              <div style={{ marginTop: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                  Target Category or Seller hints (e.g. "Shoes", "Sports", "Innerwear", "Running Sneakers")
-                </label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="e.g. Shoes, Sports, Innerwear, Nike Air..."
-                  value={sellerHints}
-                  onChange={(e) => setSellerHints(e.target.value)}
-                />
-
-                {/* Quick Category Chips */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: '0.75rem' }}>
-                  {POPULAR_CATEGORIES.map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setSellerHints(cat)}
-                      className="btn-ghost"
-                      style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 999, border: '1px solid var(--border)' }}
-                    >
-                      +{cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={handleGenerateDraft}
-                disabled={loadingDraft}
-                className="btn-glow"
-                style={{ width: '100%', padding: '0.875rem', marginTop: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-              >
-                <Sparkles size={18} />
-                {loadingDraft ? 'Analyzing image & generating draft...' : 'Generate AI Listing Draft'}
-              </button>
             </div>
           ) : (
             /* Human-in-the-Loop Review Form */
             <div className="card fade-in" style={{ padding: '1.5rem', border: '1px solid var(--accent)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Review & Edit Listing Draft</h2>
-                <button onClick={() => setDraft(null)} className="btn-ghost" style={{ fontSize: '0.8rem' }}>Start over</button>
+                <button onClick={() => { setDraft(null); }} className="btn-ghost" style={{ fontSize: '0.8rem' }}>Start over</button>
               </div>
+
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>

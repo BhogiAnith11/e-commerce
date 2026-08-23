@@ -6,7 +6,7 @@ import { sendWelcomeEmail } from '@/lib/resend';
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password, name, role } = await req.json();
+    const { email, password, name, role, phone, vehicleNumber, deliveryHub } = await req.json();
 
     // Validation
     if (!email || !password || !name || !role) {
@@ -16,9 +16,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!['seller', 'buyer', 'admin'].includes(role)) {
+    if (!['seller', 'buyer', 'admin', 'delivery'].includes(role)) {
       return NextResponse.json(
-        { error: 'role must be "seller", "buyer", or "admin"' },
+        { error: 'role must be "seller", "buyer", "admin", or "delivery"' },
         { status: 400 }
       );
     }
@@ -54,6 +54,9 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       role,
       passwordHash,
+      phone: phone || undefined,
+      vehicleNumber: vehicleNumber || undefined,
+      deliveryHub: deliveryHub || 'Bengaluru Central Hub KA-01',
     });
 
     // Send Welcome Email asynchronously via Resend

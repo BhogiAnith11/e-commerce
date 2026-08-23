@@ -12,11 +12,13 @@ export interface IUserAddress {
 export interface IUser extends Document {
   email: string;
   name: string;
-  role: 'seller' | 'buyer' | 'admin';
+  role: 'seller' | 'buyer' | 'admin' | 'delivery';
   passwordHash: string;
   image?: string;
   phone?: string;
   storeName?: string;
+  vehicleNumber?: string;
+  deliveryHub?: string;
   address?: IUserAddress;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
@@ -29,11 +31,13 @@ const UserSchema = new Schema<IUser>(
   {
     email: { type: String, required: true, unique: true, lowercase: true },
     name: { type: String, required: true },
-    role: { type: String, enum: ['seller', 'buyer', 'admin'], required: true },
+    role: { type: String, enum: ['seller', 'buyer', 'admin', 'delivery'], required: true },
     passwordHash: { type: String, required: true },
     image: { type: String },
     phone: { type: String },
     storeName: { type: String },
+    vehicleNumber: { type: String },
+    deliveryHub: { type: String, default: 'Bengaluru Central Hub KA-01' },
     address: {
       line1: { type: String },
       line2: { type: String },

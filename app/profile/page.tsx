@@ -22,6 +22,8 @@ import {
   Calendar,
   Sparkles,
   Award,
+  Navigation,
+  Loader2,
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -31,8 +33,10 @@ export default function ProfilePage() {
   const [sellerMetrics, setSellerMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Edit Mode state
+  // Live Location & Edit State
   const [isEditing, setIsEditing] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locationSuccess, setLocationSuccess] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -79,8 +83,107 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 1-Click Live GPS Geolocation Auto-Detection
+  const handleUseLiveLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setLocating(true);
+    setIsEditing(true); // Open edit mode so user sees detected fields
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        let resolved = false;
+
+        // 1. Try Google Maps Geocoding if API key configured
+        const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (googleApiKey) {
+          try {
+            const gRes = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleApiKey}`
+            );
+            const gData = await gRes.json();
+            if (gData.status === 'OK' && gData.results?.[0]) {
+              const result = gData.results[0];
+              let street = '';
+              let city = 'Bengaluru';
+              let state = 'Karnataka';
+              let postalCode = '560038';
+
+              for (const comp of result.address_components || []) {
+                if (comp.types.includes('route') || comp.types.includes('sublocality')) street += (street ? ', ' : '') + comp.long_name;
+                if (comp.types.includes('locality') || comp.types.includes('administrative_area_level_2')) city = comp.long_name;
+                if (comp.types.includes('administrative_area_level_1')) state = comp.long_name;
+                if (comp.types.includes('postal_code')) postalCode = comp.long_name;
+              }
+
+              setFormData((prev) => ({
+                ...prev,
+                line1: street || result.formatted_address?.split(',')[0] || 'Live Location Street',
+                city,
+                state,
+                postalCode,
+              }));
+              resolved = true;
+              setLocationSuccess(true);
+              setTimeout(() => setLocationSuccess(false), 4000);
+            }
+          } catch (gErr) {
+            console.warn('Google Maps Geocoding error:', gErr);
+          }
+        }
+
+        // 2. OpenStreetMap reverse geocode fallback
+        if (!resolved) {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+            );
+            if (res.ok) {
+              const data = await res.json();
+              const addr = data.address || {};
+              const street = addr.road || addr.suburb || addr.neighbourhood || 'Live Location Area';
+              const city = addr.city || addr.town || addr.state_district || 'Bengaluru';
+              const state = addr.state || 'Karnataka';
+              const postalCode = addr.postcode || '560038';
+
+              setFormData((prev) => ({
+                ...prev,
+                line1: `${street}, ${data.display_name?.split(',')[0] || ''}`.trim(),
+                city,
+                state,
+                postalCode,
+              }));
+              setLocationSuccess(true);
+              setTimeout(() => setLocationSuccess(false), 4000);
+            }
+          } catch {
+            setFormData((prev) => ({
+              ...prev,
+              line1: `GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+              city: 'Bengaluru',
+              state: 'Karnataka',
+              postalCode: '560038',
+            }));
+            setLocationSuccess(true);
+          }
+        }
+        setLocating(false);
+      },
+      (err) => {
+        console.warn('Geolocation error:', err);
+        alert('Location permission denied or unavailable. You can enter your address manually.');
+        setLocating(false);
+      },
+      { timeout: 10000 }
+    );
+  };
+
+  const handleSaveProfile = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setSaving(true);
     setSaveSuccess(false);
 
@@ -156,11 +259,18 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {locationSuccess && (
+        <div className="fade-in" style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid var(--accent-bright)', color: 'var(--accent-bright)', padding: '1rem', borderRadius: 'var(--radius)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', fontWeight: 600 }}>
+          <Navigation size={18} />
+          <span>📍 Live Location detected! Click "Save Changes" to save to your account.</span>
+        </div>
+      )}
+
       {/* Header Profile Card */}
       <div className="card fade-in" style={{ padding: '2rem', marginBottom: '2rem', border: '1px solid var(--border)', background: 'radial-gradient(ellipse at top right, rgba(99,102,241,0.08), transparent 70%), var(--bg-card)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-            {/* Avatar / Profile Image */}
+            {/* Avatar */}
             <div style={{ position: 'relative' }}>
               {profile.image ? (
                 <img src={profile.image} alt={profile.name} style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent)' }} />
@@ -367,11 +477,36 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Address Details */}
+        {/* Address Details with 1-Click Live Location Auto-Detect */}
         <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <MapPin size={18} color="var(--emerald)" /> {isSeller ? 'Business Dispatch Address' : 'Default Delivery Address'}
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <MapPin size={18} color="var(--emerald)" /> {isSeller ? 'Business Dispatch Address' : 'Default Delivery Address'}
+            </h2>
+
+            {/* 1-Click Live GPS Location Button */}
+            <button
+              type="button"
+              onClick={handleUseLiveLocation}
+              disabled={locating}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: 'var(--accent-bright)',
+                background: 'rgba(56,189,248,0.1)',
+                border: '1px solid rgba(56,189,248,0.3)',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                cursor: 'pointer',
+              }}
+            >
+              {locating ? <Loader2 size={12} className="spin" /> : <Navigation size={12} />}
+              {locating ? 'Detecting Live GPS...' : '📍 Use Current Live Location'}
+            </button>
+          </div>
 
           {isEditing ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -415,6 +550,18 @@ export default function ProfilePage() {
                   onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
                 />
               </div>
+
+              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => handleSaveProfile()}
+                  disabled={saving}
+                  className="btn-glow"
+                  style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Save size={15} /> {saving ? 'Saving...' : 'Save Address to Account'}
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.9rem' }}>
@@ -441,6 +588,28 @@ export default function ProfilePage() {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>COUNTRY</div>
                   <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: 2 }}>{profile.address?.country || 'India'}</div>
                 </div>
+              </div>
+
+              {/* Action Buttons for View Mode */}
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleUseLiveLocation}
+                  disabled={locating}
+                  className="btn-glow"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', padding: '7px 14px' }}
+                >
+                  {locating ? <Loader2 size={14} className="spin" /> : <Navigation size={14} />}
+                  {locating ? 'Detecting GPS...' : '📍 Auto-Detect Live GPS Location'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="btn-outline"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', padding: '7px 14px' }}
+                >
+                  <Edit3 size={14} /> Edit Address
+                </button>
               </div>
             </div>
           )}

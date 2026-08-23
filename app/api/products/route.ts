@@ -30,19 +30,29 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
+    // Build flexible search words
+    const searchTerms = query
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 1);
+
     // Build MongoDB filter
     const filter: Record<string, unknown> = { status: 'published' };
 
-    if (query) {
-      filter.$or = [
-        { title: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } },
-        { tags: { $in: [new RegExp(query, 'i')] } },
-      ];
+    if (searchTerms.length > 0) {
+      filter.$or = searchTerms.map((term) => ({
+        $or: [
+          { title: { $regex: term, $options: 'i' } },
+          { description: { $regex: term, $options: 'i' } },
+          { category: { $regex: term, $options: 'i' } },
+          { tags: { $in: [new RegExp(term, 'i')] } },
+        ],
+      }));
     }
 
     if (category) {
-      filter.category = { $regex: `^${category}$`, $options: 'i' };
+      const cleanCat = category.replace(/premium\s*/i, '').trim();
+      filter.category = { $regex: cleanCat || category, $options: 'i' };
     }
 
     if (maxPrice || minPrice) {
@@ -51,24 +61,55 @@ export async function GET(req: NextRequest) {
       if (maxPrice) (filter.price as Record<string, number>).$lte = parseFloat(maxPrice);
     }
 
-    // Sort
+    // Sort options
     let sortQuery: Record<string, 1 | -1> = { createdAt: -1 };
     if (sort === 'price_asc') sortQuery = { price: 1 };
     else if (sort === 'price_desc') sortQuery = { price: -1 };
+    else if (sort === 'top_rated' || sort === 'rating') sortQuery = { rating: -1, numReviews: -1, createdAt: -1 };
 
-    // For featured: just take the latest published (could be expanded with view-count etc.)
+    // For featured: just take the latest published
     const effectiveLimit = featured ? 8 : limit;
     const skip = featured ? 0 : (page - 1) * limit;
 
-    const [products, total] = await Promise.all([
+    let [products, total] = await Promise.all([
       Product.find(filter)
         .sort(sortQuery)
         .skip(skip)
         .limit(effectiveLimit)
-        .select('title description category tags price stock imageUrl status createdAt')
+        .select('title description category tags price stock imageUrl rating numReviews status createdAt')
         .lean(),
       Product.countDocuments(filter),
     ]);
+
+    // Fallback: If no products found with category filter, retry without category filter
+    if (products.length === 0 && category && searchTerms.length > 0) {
+      const fallbackFilter: Record<string, unknown> = {
+        status: 'published',
+        $or: searchTerms.map((term) => ({
+          $or: [
+            { title: { $regex: term, $options: 'i' } },
+            { description: { $regex: term, $options: 'i' } },
+            { tags: { $in: [new RegExp(term, 'i')] } },
+          ],
+        })),
+      };
+      if (maxPrice || minPrice) fallbackFilter.price = filter.price;
+
+      const [fbProducts, fbTotal] = await Promise.all([
+        Product.find(fallbackFilter)
+          .sort(sortQuery)
+          .skip(skip)
+          .limit(effectiveLimit)
+          .select('title description category tags price stock imageUrl rating numReviews status createdAt')
+          .lean(),
+        Product.countDocuments(fallbackFilter),
+      ]);
+
+      if (fbProducts.length > 0) {
+        products = fbProducts;
+        total = fbTotal;
+      }
+    }
 
     return NextResponse.json({
       products,

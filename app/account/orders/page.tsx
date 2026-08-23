@@ -43,6 +43,12 @@ export default function OrdersHistoryPage() {
   const [cancelling, setCancelling] = useState(false);
   const [notification, setNotification] = useState('');
 
+  // Rating and review state after delivery
+  const [reviewModalItem, setReviewModalItem] = useState<any>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
   useEffect(() => {
     loadOrders();
   }, [authStatus]);
@@ -89,6 +95,32 @@ export default function OrdersHistoryPage() {
       alert(err.message);
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleOrderReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewModalItem?.productId || submittingReview) return;
+    setSubmittingReview(true);
+
+    try {
+      const res = await fetch(`/api/products/${reviewModalItem.productId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: reviewRating, comment: reviewComment }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to submit review');
+
+      setNotification(`🎉 Rating submitted! Product rating updated to ${data.rating} ★ (${data.numReviews} reviews).`);
+      setReviewModalItem(null);
+      setReviewComment('');
+      setTimeout(() => setNotification(''), 6000);
+    } catch (err: any) {
+      alert(err.message || 'Error submitting review');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -162,7 +194,9 @@ export default function OrdersHistoryPage() {
           {orders.map((order) => {
             const isCancelled = order.status === 'cancelled';
             const isDelivered = order.status === 'delivered';
-            const isPaid = order.status === 'paid' || isDelivered;
+            const isOutForDelivery = order.status === 'out_for_delivery' || isDelivered;
+            const isShipped = order.status === 'shipped' || isOutForDelivery;
+            const isOrdered = !isCancelled;
             const deliveryDate = order.estimatedDeliveryDate
               ? new Date(order.estimatedDeliveryDate).toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })
               : 'Thursday, 3 Business Days';
@@ -174,7 +208,7 @@ export default function OrdersHistoryPage() {
                 style={{
                   padding: '0',
                   overflow: 'hidden',
-                  border: `1px solid ${isCancelled ? 'rgba(244,63,94,0.3)' : 'var(--border)'}`,
+                  border: `1px solid ${isCancelled ? 'rgba(244,63,94,0.3)' : isDelivered ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
                   background: 'var(--bg-card)',
                 }}
               >
@@ -226,13 +260,12 @@ export default function OrdersHistoryPage() {
                   <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     <div style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 600 }}>Order # {order._id ? order._id.slice(-8) : ''}</div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <button
-                        onClick={() => alert(`ShopEZ Tax Invoice\nOrder ID: ${order._id}\nTotal Amount: ₹${order.totalAmount}\nPayment Method: ${order.paymentMethod || 'Razorpay / UPI'}\nStatus: ${order.status?.toUpperCase()}`)}
-                        className="btn-ghost"
-                        style={{ fontSize: '0.75rem', padding: '2px 6px', color: 'var(--accent-bright)' }}
+                      <Link
+                        href={`/account/orders`}
+                        style={{ color: 'var(--accent-bright)', textDecoration: 'none', fontWeight: 600, fontSize: '0.8rem' }}
                       >
-                        <FileText size={12} /> View Invoice
-                      </button>
+                        View invoice
+                      </Link>
                       {!isCancelled && !isDelivered && (
                         <button
                           onClick={() => setCancelModalOrder(order)}
@@ -271,20 +304,58 @@ export default function OrdersHistoryPage() {
                             100% Refund has been initiated to your original payment method.
                           </p>
                         </div>
-                      ) : (
+                      ) : isDelivered ? (
                         <div>
-                          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: isPaid ? 'var(--emerald)' : 'var(--gold)' }}>
-                            {isPaid ? `Arriving ${deliveryDate}` : 'Payment Pending'}
+                          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--emerald)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <CheckCircle2 size={18} /> Delivered {order.deliveredAt ? new Date(order.deliveredAt).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' }) : 'Today'}
                           </h3>
                           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                            Package is moving along the live fulfillment route.
+                            Package was handed directly to resident • Verified by ShopEZ Delivery Agent.
+                          </p>
+                        </div>
+                      ) : order.status === 'out_for_delivery' ? (
+                        <div>
+                          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Truck size={18} /> Out for Delivery Today
+                          </h3>
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                            Delivery Executive Rajesh Kumar (KA-01) is on the final route with your package.
+                          </p>
+                        </div>
+                      ) : order.status === 'shipped' ? (
+                        <div>
+                          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Package size={18} /> In Transit • Shipped via ShopEZ Express
+                          </h3>
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                            Package is moving through the regional distribution logistics hub.
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--emerald)' }}>
+                            Arriving {deliveryDate}
+                          </h3>
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                            Order received and confirmed • Packing at merchant warehouse.
                           </p>
                         </div>
                       )}
                     </div>
 
-                    <span className={`badge badge-${isCancelled ? 'delisted' : isPaid ? 'published' : 'draft'}`} style={{ fontSize: '0.8rem', padding: '4px 12px' }}>
-                      {order.status ? order.status.toUpperCase() : 'CONFIRMED'}
+                    <span
+                      className="badge"
+                      style={{
+                        fontSize: '0.8rem',
+                        padding: '4px 12px',
+                        textTransform: 'uppercase',
+                        fontWeight: 800,
+                        background: isDelivered ? 'rgba(16,185,129,0.15)' : order.status === 'out_for_delivery' ? 'rgba(245,158,11,0.15)' : order.status === 'shipped' ? 'rgba(56,189,248,0.15)' : isCancelled ? 'rgba(244,63,94,0.15)' : 'rgba(99,102,241,0.15)',
+                        color: isDelivered ? 'var(--emerald)' : order.status === 'out_for_delivery' ? '#f59e0b' : order.status === 'shipped' ? '#38bdf8' : isCancelled ? 'var(--rose)' : 'var(--accent-bright)',
+                        border: `1px solid ${isDelivered ? 'var(--emerald)' : order.status === 'out_for_delivery' ? '#f59e0b' : order.status === 'shipped' ? '#38bdf8' : isCancelled ? 'var(--rose)' : 'var(--accent-bright)'}`,
+                      }}
+                    >
+                      {order.status ? order.status.replace(/_/g, ' ') : 'CONFIRMED'}
                     </span>
                   </div>
 
@@ -296,19 +367,19 @@ export default function OrdersHistoryPage() {
                       </div>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', textAlign: 'center', fontSize: '0.75rem', position: 'relative' }}>
-                        <div style={{ color: 'var(--emerald)', fontWeight: 700 }}>
-                          <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'var(--emerald)', margin: '0 auto 6px' }} />
+                        <div style={{ color: isOrdered ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: isOrdered ? 700 : 500 }}>
+                          <div style={{ width: 14, height: 14, borderRadius: '50%', background: isOrdered ? 'var(--emerald)' : 'var(--border)', margin: '0 auto 6px' }} />
                           Ordered
                         </div>
-                        <div style={{ color: isPaid ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: 600 }}>
-                          <div style={{ width: 14, height: 14, borderRadius: '50%', background: isPaid ? 'var(--emerald)' : 'var(--border)', margin: '0 auto 6px' }} />
+                        <div style={{ color: isShipped ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: isShipped ? 700 : 500 }}>
+                          <div style={{ width: 14, height: 14, borderRadius: '50%', background: isShipped ? 'var(--emerald)' : 'var(--border)', margin: '0 auto 6px' }} />
                           Shipped
                         </div>
-                        <div style={{ color: isPaid ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: 600 }}>
-                          <div style={{ width: 14, height: 14, borderRadius: '50%', background: isPaid ? 'var(--emerald)' : 'var(--border)', margin: '0 auto 6px' }} />
+                        <div style={{ color: isOutForDelivery ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: isOutForDelivery ? 700 : 500 }}>
+                          <div style={{ width: 14, height: 14, borderRadius: '50%', background: isOutForDelivery ? 'var(--emerald)' : 'var(--border)', margin: '0 auto 6px' }} />
                           Out for Delivery
                         </div>
-                        <div style={{ color: isDelivered ? 'var(--emerald)' : 'var(--text-muted)' }}>
+                        <div style={{ color: isDelivered ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: isDelivered ? 700 : 500 }}>
                           <div style={{ width: 14, height: 14, borderRadius: '50%', background: isDelivered ? 'var(--emerald)' : 'var(--border)', margin: '0 auto 6px' }} />
                           Delivered
                         </div>
@@ -366,6 +437,32 @@ export default function OrdersHistoryPage() {
                           >
                             <RotateCcw size={13} /> Buy it again
                           </Link>
+
+                          {/* ⭐ Rate & Review Product Button (Available after delivery or on orders) */}
+                          {!isCancelled && (
+                            <button
+                              onClick={() => {
+                                setReviewModalItem(item);
+                                setReviewRating(5);
+                                setReviewComment('');
+                              }}
+                              style={{
+                                fontSize: '0.8rem',
+                                padding: '7px 14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 'var(--radius)',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Star size={13} fill="#fff" /> Rate & Review Product
+                            </button>
+                          )}
 
                           {/* 🚫 Cancel Order Button (placed right beside Buy it again) */}
                           {!isCancelled && !isDelivered && (
@@ -649,6 +746,112 @@ export default function OrdersHistoryPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rate & Review Modal */}
+      {reviewModalItem && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="card fade-in"
+            style={{
+              maxWidth: '480px',
+              width: '100%',
+              padding: '2rem',
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Rate Delivered Product</h3>
+              <button
+                onClick={() => setReviewModalItem(null)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+              How was your experience with <strong>{reviewModalItem.title}</strong>?
+            </p>
+
+            <form
+              onSubmit={handleOrderReviewSubmit}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                  Your Rating:
+                </label>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setReviewRating(s)}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2 }}
+                    >
+                      <Star
+                        size={28}
+                        color={s <= reviewRating ? '#f59e0b' : 'var(--border)'}
+                        fill={s <= reviewRating ? '#f59e0b' : 'none'}
+                      />
+                    </button>
+                  ))}
+                  <span style={{ marginLeft: 8, fontWeight: 700, fontSize: '0.95rem', color: '#f59e0b' }}>
+                    {reviewRating} of 5 Stars
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                  Your Review / Feedback:
+                </label>
+                <textarea
+                  rows={4}
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Share details about comfort, quality, delivery, or sizing..."
+                  className="input-field"
+                  style={{ width: '100%', resize: 'vertical', fontSize: '0.875rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setReviewModalItem(null)}
+                  className="btn-ghost"
+                  style={{ padding: '8px 16px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="btn-glow"
+                  style={{ padding: '8px 20px', fontWeight: 700 }}
+                >
+                  {submittingReview ? 'Submitting...' : 'Submit Rating'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

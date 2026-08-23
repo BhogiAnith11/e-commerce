@@ -187,8 +187,8 @@ export default function AgentChat({ role, productId, initialMessage, onActionCom
 
               {m.toolResult && m.toolUse === 'search_products' && m.toolResult.results && (
                 <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {m.toolResult.results.slice(0, 3).map((prod: any) => (
-                    <div key={prod.product_id || prod.objectID} style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                  {m.toolResult.results.slice(0, 3).map((prod: any, idx: number) => (
+                    <div key={prod._id || prod.product_id || prod.objectID || `prod_${idx}`} style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                       {prod.imageUrl && (
                         <img src={prod.imageUrl} alt={prod.title} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6 }} />
                       )}

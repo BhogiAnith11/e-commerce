@@ -39,7 +39,7 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  /* scroll-behavior is managed via data-scroll-behavior="smooth" on <html> in layout.tsx */
 }
 
 body {
