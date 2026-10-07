@@ -1,0 +1,27 @@
+import './globals.css';
+import Providers from '@/components/Providers';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import FloatingChatBot from '@/components/FloatingChatBot';
+
+export const metadata = {
+  title: 'ShopEZ — AI-Powered Marketplace',
+  description:
+    'ShopEZ is an AI-driven e-commerce platform where sellers list products from a single image and buyers shop with a conversational AI agent.',
+  keywords: 'e-commerce, AI shopping, marketplace, ShopEZ',
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" data-scroll-behavior="smooth">
+      <body>
+        <Providers>
+          <Navbar />
+          <main style={{ minHeight: 'calc(100vh - 72px)' }}>{children}</main>
+          <Footer />
+          <FloatingChatBot />
+        </Providers>
+      </body>
+    </html>
+  );
+}

@@ -1,17 +1,18 @@
 /**
  * jest.config.js
- * Using ts-jest for TypeScript support.
+ * Using babel-jest for JavaScript support.
  */
 
 /** @type {import('jest').Config} */
 const config = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
+  transform: {
+    '^.+\\.(js|jsx)$': 'babel-jest',
+  },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
-  testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
-
+  testMatch: ['**/__tests__/**/*.test.js', '**/__tests__/**/*.test.jsx'],
 };
 
 module.exports = config;
