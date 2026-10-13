@@ -14,15 +14,39 @@ services:
         sync: false
       - key: MONGO_URI
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: INTERNAL_SERVICE_TOKEN
+        sync: false
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
       - key: NEXT_PUBLIC_RAZORPAY_KEY_ID
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
       - key: RESEND_API_KEY
         sync: false
-      - key: ANTHROPIC_API_KEY
+      - key: ALGOLIA_APP_ID
+        sync: false
+      - key: ALGOLIA_API_KEY
+        sync: false
+      - key: ALGOLIA_ADMIN_KEY
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_S3_BUCKET
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
