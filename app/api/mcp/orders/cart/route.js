@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/mongodb';
 import Cart from '@/models/Cart';
@@ -44,7 +44,7 @@ async function resolveBuyerId(session, req){
 export async function GET(req) {
   try {
     const session = await getServerSession();
-    const buyerId = await resolveBuyerId(req);
+    const buyerId = await resolveBuyerId(session, req);
 
     const cart = await Cart.findOne({ buyerId }).lean();
     return NextResponse.json({ cart: cart || { items: [] } });
@@ -58,7 +58,7 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const session = await getServerSession();
-    const buyerId = await resolveBuyerId(req);
+    const buyerId = await resolveBuyerId(session, req);
 
     const { product_id, qty = 1 } = await req.json();
     if (!product_id) {
@@ -108,7 +108,7 @@ export async function POST(req) {
 export async function PATCH(req) {
   try {
     const session = await getServerSession();
-    const buyerId = await resolveBuyerId(req);
+    const buyerId = await resolveBuyerId(session, req);
 
     const { product_id, qty } = await req.json();
     if (!product_id) {
@@ -137,7 +137,7 @@ export async function PATCH(req) {
 export async function DELETE(req) {
   try {
     const session = await getServerSession();
-    const buyerId = await resolveBuyerId(req);
+    const buyerId = await resolveBuyerId(session, req);
 
     await Cart.findOneAndDelete({ buyerId });
     return NextResponse.json({ message: 'Cart cleared' });

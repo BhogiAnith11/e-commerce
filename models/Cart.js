@@ -18,10 +18,5 @@ const CartSchema = new Schema(
 
 const Cart = mongoose.models.Cart || mongoose.model('Cart', CartSchema);
 
-// Synchronize indexes to remove obsolete indexes like 'user_1'
-Cart.syncIndexes().catch(() => {
-  Cart.collection.dropIndex('user_1').catch(() => {});
-});
-
 export default Cart;
 

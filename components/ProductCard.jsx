@@ -167,3 +167,8 @@ export default function ProductCard({
     </div>
   );
 }
+
+/**
+ * ProductCardData — exported shape reference used by pages importing this component.
+ */
+export const ProductCardData = {};

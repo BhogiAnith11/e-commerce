@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 
-const providers[] = [
+const providers = [
   CredentialsProvider({
     name: 'credentials',
     credentials: {
@@ -107,4 +107,4 @@ const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
 });
 
-export { handler, handler };
+export { handler as GET, handler as POST };

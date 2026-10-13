@@ -9,7 +9,7 @@ async function fetchCartCount(){
   const res = await fetch('/api/mcp/orders/cart');
   if (!res.ok) return 0;
   const data = await res.json();
-  return (data.cart?.items || []).reduce((sum, item: { qty }) => sum + item.qty, 0);
+  return (data.cart?.items || []).reduce((sum, item) => sum + item.qty, 0);
 }
 
 export default function Navbar() {

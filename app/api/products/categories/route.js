@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
 
@@ -20,7 +20,7 @@ export async function GET(req) {
     const dbCategories = await Product.distinct('category', { status: 'published' });
 
     // Deduplicate case-insensitively and format into Title Case
-    const categoryMap = new Map<string, string>();
+    const categoryMap = new Map();
     categoryMap.set('all', 'All');
 
     // Add merchant categories first

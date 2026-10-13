@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -91,7 +91,7 @@ export default function AdminPortal() {
     }
   };
 
-  const handleProductStatusChange = async (productId, newStatus: 'published' | 'delisted' | 'draft') => {
+  const handleProductStatusChange = async (productId, newStatus) => {
     try {
       const res = await fetch(`/api/admin/products/${productId}`, {
         method: 'PATCH',

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signIn, signOut } from 'next-auth/react';
@@ -29,30 +29,8 @@ import {
   Building
 } from 'lucide-react';
 
-;
-  items: OrderItem[];
-  totalAmount;
-  status: 'created' | 'paid' | 'processing' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
-  shippingAddress: {
-    name;
-    phone;
-    line1;
-    line2;
-    city;
-    state;
-    postalCode;
-  };
-  paymentMethod;
-  courierName;
-  trackingNumber;
-  deliveryOtp;
-  deliveryNotes;
-  deliveredAt;
-  createdAt;
-}
-
 export default function DeliveryAgentPortal() {
-  const { data: status: authStatus } = useSession();
+  const { data: session, status: authStatus } = useSession();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');

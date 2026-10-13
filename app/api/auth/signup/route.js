@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
@@ -16,9 +16,16 @@ export async function POST(req) {
       );
     }
 
-    if (!['seller', 'buyer', 'admin', 'delivery'].includes(role)) {
+    if (role === 'admin') {
       return NextResponse.json(
-        { error: 'role must be "seller", "buyer", "admin", or "delivery"' },
+        { error: 'Admin accounts cannot be registered publicly' },
+        { status: 403 }
+      );
+    }
+
+    if (!['seller', 'buyer', 'delivery'].includes(role)) {
+      return NextResponse.json(
+        { error: 'role must be "seller", "buyer", or "delivery"' },
         { status: 400 }
       );
     }

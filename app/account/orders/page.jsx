@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -34,7 +34,7 @@ const CANCELLATION_REASONS = [
 ];
 
 export default function OrdersHistoryPage() {
-  const { data: status: authStatus } = useSession();
+  const { data: session, status: authStatus } = useSession();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [trackingOrder, setTrackingOrder] = useState(null);

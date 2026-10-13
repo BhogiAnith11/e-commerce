@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import anthropic from '@/lib/anthropic';
 
 const PROHIBITED_KEYWORDS = [
@@ -29,7 +29,8 @@ export async function POST(req) {
 
     // Claude moderation check
     try {
-      const message = await anthropic.messages.create({: 'claude-3-5-sonnet-20241022',
+      const message = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 512,
         messages: [
           {

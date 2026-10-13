@@ -60,7 +60,7 @@ export async function GET(req) {
     let totalRevenue = 0;
     let totalUnitsSold = 0;
     let cancelledCount = 0;
-    const sellerOrders[] = [];
+    const sellerOrders = [];
 
     for (const order of allOrders) {
       const matchingItems = (order.items || []).filter((item) =>

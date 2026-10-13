@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { searchProducts } from '@/lib/algolia';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
@@ -31,7 +31,7 @@ export async function GET(req) {
     const maxPrice = searchParams.get('max_price');
     const category = searchParams.get('category') || undefined;
 
-    let results[] = [];
+    let results = [];
 
     // Try Algolia
     try {
@@ -72,7 +72,7 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const { query, filters } = await req.json();
-    let results[] = [];
+    let results = [];
 
     try {
       results = await searchProducts(query || '', filters);

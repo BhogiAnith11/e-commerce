@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { data: status: authStatus } = useSession();
+  const { data: session, status: authStatus } = useSession();
   const [profile, setProfile] = useState(null);
   const [buyerMetrics, setBuyerMetrics] = useState(null);
   const [sellerMetrics, setSellerMetrics] = useState(null);

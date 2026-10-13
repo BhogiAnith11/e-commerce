@@ -27,8 +27,8 @@ export async function POST(req) {
     const isImage = contentType.startsWith('image/');
 
     let image_url;
-    let extracted_title | undefined;
-    let extracted_price | undefined;
+    let extracted_title;
+    let extracted_price;
     let extracted_specs = {};
 
     if (isImage) {

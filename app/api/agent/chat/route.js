@@ -141,7 +141,7 @@ const TOOL_ENDPOINT_MAP = {
   search_products: '/api/mcp/catalog/search',
   add_to_cart: '/api/mcp/orders/cart',
   get_cart_summary: '/api/mcp/orders/cart',
-  create_payment_session: '/api/checkout/session',
+  create_payment_session: '/api/checkout',
   get_order_status: '/api/mcp/orders/status',
 };
 
@@ -201,11 +201,11 @@ async function callMcpTool(
 async function runGeminiToolAgent(
   apiKey,
   systemPrompt,
-  messages: Array<{ role; content }>,
+  messages,
   baseUrl,
   cookieHeader,
-  controller: ReadableStreamDefaultController,
-  encoder: TextEncoder,
+  controller,
+  encoder,
   sessionId,
   userId
 ){
@@ -219,7 +219,7 @@ async function runGeminiToolAgent(
           parameters: {
             type: 'OBJECT',
             properties: Object.fromEntries(
-              Object.entries(t.parameters.properties).map(([k, v]: [string, any]) => [
+              Object.entries(t.parameters.properties).map(([k, v]) => [
                 k,
                 {
                   type: v.type.toUpperCase(),
@@ -234,8 +234,8 @@ async function runGeminiToolAgent(
     ];
 
     // Format Gemini contents
-    let contents[] = messages.map((m) => ({
-      role: m.role === 'assistant' ? '' : 'user',
+    let contents = messages.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
 
@@ -266,7 +266,7 @@ async function runGeminiToolAgent(
 
       const parts = candidate.content.parts || [];
       let hasFunctionCall = false;
-      let modelResponseParts[] = [];
+      let modelResponseParts = [];
 
       for (const part of parts) {
         if (part.text) {
@@ -302,7 +302,7 @@ async function runGeminiToolAgent(
           modelResponseParts.push(part);
 
           // Append call and function response back to contents
-          contents.push({ role: '', parts: modelResponseParts });
+          contents.push({ role: 'model', parts: modelResponseParts });
           contents.push({
             role: 'user',
             parts: [
@@ -336,11 +336,11 @@ async function runOpenAiToolAgent(
   apiUrl,
   modelName,
   systemPrompt,
-  messages: Array<{ role; content }>,
+  messages,
   baseUrl,
   cookieHeader,
-  controller: ReadableStreamDefaultController,
-  encoder: TextEncoder,
+  controller,
+  encoder,
   sessionId,
   userId
 ){
@@ -354,7 +354,7 @@ async function runOpenAiToolAgent(
       },
     }));
 
-    let currentMessages[] = [
+    let currentMessages = [
       { role: 'system', content: systemPrompt },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
     ];
@@ -366,7 +366,8 @@ async function runOpenAiToolAgent(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({: modelName,
+        body: JSON.stringify({
+          model: modelName,
           messages: currentMessages,
           tools: openAiTools,
           temperature: 0.4,
@@ -433,14 +434,14 @@ async function runOpenAiToolAgent(
  * Dynamically resolves tool intents, performs live MongoDB queries, calls tools, and crafts responsive context-aware answers.
  */
 async function runDynamicMcpFallbackEngine(
-  role: 'seller' | 'buyer',
-  messages: Array<{ role; content }>,
+  role,
+  messages,
   userId,
   sessionId,
   baseUrl,
   cookieHeader,
-  controller: ReadableStreamDefaultController,
-  encoder: TextEncoder
+  controller,
+  encoder
 ) {
   await connectDB();
 
@@ -774,19 +775,20 @@ export async function POST(req) {
         if (!agentHandled && process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY.startsWith('sk-ant')) {
           try {
             const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-            const anthropicTools: Anthropic.Tool[] = TOOL_DEFINITIONS.map((t) => ({
+            const anthropicTools = TOOL_DEFINITIONS.map((t) => ({
               name: t.name,
               description: t.description,
               input_schema: t.parameters,
             }));
 
-            let currentMessages: Anthropic.MessageParam[] = messages.map((m) => ({
+            let currentMessages = messages.map((m) => ({
               role: m.role === 'assistant' ? 'assistant' : 'user',
               content: m.content,
             }));
 
             for (let step = 0; step < 3; step++) {
-              const response = await anthropic.messages.create({: 'claude-3-5-sonnet-20241022',
+              const response = await anthropic.messages.create({
+                model: 'claude-3-5-sonnet-20241022',
                 max_tokens: 4096,
                 system: systemPrompt,
                 tools: anthropicTools,

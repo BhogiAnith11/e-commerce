@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ProductCard, { ProductCardData } from '@/components/ProductCard';
-import { Search, SlidersHorizontal, Package, Sparkles } from 'lucide-react';
+import { Search, Search as SearchIcon, SlidersHorizontal, Package, Sparkles } from 'lucide-react';
 import AgentChat from '@/components/AgentChat';
 
 function SearchContent() {

@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
-import { Zap, Lock, Mail, User, Store, ShoppingBag, ShieldCheck, AlertCircle, ArrowRight } from 'lucide-react';
+import { Zap, Lock, Mail, User, Store, ShoppingBag, AlertCircle, ArrowRight } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -42,8 +42,7 @@ export default function SignupPage() {
       if (signInRes?.error) {
         router.push('/login');
       } else {
-        if (role === 'admin') router.push('/admin');
-        else if (role === 'seller') router.push('/seller/dashboard');
+        if (role === 'seller') router.push('/seller/dashboard');
         else router.push('/');
         router.refresh();
       }
@@ -66,7 +65,7 @@ export default function SignupPage() {
             <Zap size={24} color="white" fill="white" />
           </div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>Create your account</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>Join ShopEZ to buy, sell, or manage marketplace operations</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>Join ShopEZ to buy or sell products</p>
         </div>
 
         {/* Google 1-Click Sign-Up */}
@@ -111,10 +110,10 @@ export default function SignupPage() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Role selector with 3 options: Buyer, Seller, Admin */}
+          {/* Role selector with 2 options: Buyer, Seller */}
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Account Type</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
               <button
                 type="button"
                 onClick={() => setRole('buyer')}
@@ -159,29 +158,6 @@ export default function SignupPage() {
               >
                 <Store size={18} color={role === 'seller' ? 'var(--accent-bright)' : 'var(--text-muted)'} />
                 Seller
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setRole('admin')}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.25rem',
-                  padding: '0.75rem 0.5rem',
-                  borderRadius: 'var(--radius)',
-                  border: `2px solid ${role === 'admin' ? 'var(--accent)' : 'var(--border)'}`,
-                  background: role === 'admin' ? 'var(--accent-glow)' : 'var(--bg-secondary)',
-                  color: role === 'admin' ? 'var(--text-primary)' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '0.85rem',
-                }}
-              >
-                <ShieldCheck size={18} color={role === 'admin' ? 'var(--accent-bright)' : 'var(--text-muted)'} />
-                Admin
               </button>
             </div>
           </div>
@@ -236,7 +212,7 @@ export default function SignupPage() {
           </div>
 
           <button type="submit" className="btn-glow" disabled={loading} style={{ width: '100%', padding: '0.875rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            {loading ? 'Creating account...' : `Sign up as ${role === 'admin' ? 'Admin' : role === 'seller' ? 'Seller' : 'Buyer'}`} <ArrowRight size={16} />
+            {loading ? 'Creating account...' : `Sign up as ${role === 'seller' ? 'Seller' : 'Buyer'}`} <ArrowRight size={16} />
           </button>
         </form>
 

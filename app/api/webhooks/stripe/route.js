@@ -26,7 +26,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
     }
 
-    let event: Stripe.Event;
+    let event;
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {

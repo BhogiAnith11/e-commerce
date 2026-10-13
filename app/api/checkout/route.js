@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/mongodb';
 import Cart from '@/models/Cart';
@@ -35,7 +35,7 @@ async function resolveBuyerId(session, req){
 export async function POST(req) {
   try {
     const session = await getServerSession();
-    const buyerId = await resolveBuyerId(req);
+    const buyerId = await resolveBuyerId(session, req);
 
     const { shipping_address } = await req.json();
 
