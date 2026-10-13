@@ -163,7 +163,7 @@ export default function AdminPortal() {
       {/* Tab Navigation */}
       <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.5rem', overflowX: 'auto' }}>
         {[
-          { id: 'overview', label: '📊 Overview', count },
+          { id: 'overview', label: '📊 Overview', count: null },
           { id: 'summarizer', label: '🧠 AI Category Summarizer', count: 'NEW' },
           { id: 'agents', label: '🤖 AI Agent Activity', count: agentLogs.length },
           { id: 'products', label: '📦 Product Catalog', count: products.length },
